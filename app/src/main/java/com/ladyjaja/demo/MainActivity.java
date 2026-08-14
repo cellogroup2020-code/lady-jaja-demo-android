@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -19,7 +20,6 @@ import android.widget.Toast;
 
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -28,30 +28,19 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER = 101;
     private static final int CAMERA_PERMISSION = 102;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         webView = new WebView(this);
         setContentView(webView);
-
         WebSettings s = webView.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setAllowFileAccess(true);
-        s.setAllowContentAccess(true);
-        s.setBuiltInZoomControls(false);
-        s.setDisplayZoomControls(false);
-        s.setMediaPlaybackRequiresUserGesture(false);
-
+        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(true); s.setAllowContentAccess(true);
+        s.setBuiltInZoomControls(false); s.setDisplayZoomControls(false); s.setMediaPlaybackRequiresUserGesture(false);
         webView.addJavascriptInterface(new NativeBridge(), "AndroidBridge");
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+            @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
-                fileCallback = callback;
-                openCamera();
-                return true;
+                fileCallback = callback; openCamera(); return true;
             }
         });
         webView.loadUrl("file:///android_asset/index.html");
@@ -59,8 +48,7 @@ public class MainActivity extends Activity {
 
     private void openCamera() {
         if (android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION);
-            return;
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION); return;
         }
         ContentValues values = new ContentValues();
         values.put(MediaStore.Images.Media.DISPLAY_NAME, "LadyJaja_" + System.currentTimeMillis() + ".jpg");
@@ -72,65 +60,46 @@ public class MainActivity extends Activity {
         startActivityForResult(intent, FILE_CHOOSER);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == CAMERA_PERMISSION && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) openCamera();
         else if (fileCallback != null) { fileCallback.onReceiveValue(null); fileCallback = null; }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER && fileCallback != null) {
             Uri[] result = (resultCode == RESULT_OK && cameraUri != null) ? new Uri[]{cameraUri} : null;
-            fileCallback.onReceiveValue(result);
-            fileCallback = null;
-            cameraUri = null;
+            fileCallback.onReceiveValue(result); fileCallback = null; cameraUri = null;
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) webView.goBack(); else super.onBackPressed();
-    }
+    @Override public void onBackPressed() { if (webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
 
     public class NativeBridge {
-        @JavascriptInterface
-        public void saveText(String filename, String content, String mime) {
+        @JavascriptInterface public void saveText(String filename, String content, String mime) {
             saveBytes(filename, content.getBytes(StandardCharsets.UTF_8), mime == null ? "text/plain" : mime);
         }
-
-        @JavascriptInterface
-        public void saveDataUrl(String filename, String dataUrl) {
+        @JavascriptInterface public void saveDataUrl(String filename, String dataUrl) {
             try {
-                int comma = dataUrl.indexOf(',');
-                if (comma < 0) return;
-                String header = dataUrl.substring(0, comma);
-                String mime = "application/octet-stream";
-                int start = header.indexOf(':') + 1;
-                int end = header.indexOf(';');
+                int comma = dataUrl.indexOf(','); if (comma < 0) return;
+                String header = dataUrl.substring(0, comma); String mime = "application/octet-stream";
+                int start = header.indexOf(':') + 1, end = header.indexOf(';');
                 if (start > 0 && end > start) mime = header.substring(start, end);
-                byte[] bytes = Base64.getDecoder().decode(dataUrl.substring(comma + 1));
+                byte[] bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
                 saveBytes(filename, bytes, mime);
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Could not save file", Toast.LENGTH_SHORT).show());
-            }
+            } catch (Exception e) { runOnUiThread(() -> Toast.makeText(MainActivity.this, "Could not save file", Toast.LENGTH_SHORT).show()); }
         }
-
         private void saveBytes(String filename, byte[] bytes, String mime) {
             try {
                 ContentValues values = new ContentValues();
-                values.put(MediaStore.Downloads.DISPLAY_NAME, filename);
-                values.put(MediaStore.Downloads.MIME_TYPE, mime);
+                values.put(MediaStore.Downloads.DISPLAY_NAME, filename); values.put(MediaStore.Downloads.MIME_TYPE, mime);
                 values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Lady Jaja");
                 Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                 if (uri == null) throw new Exception("No download URI");
                 try (OutputStream out = getContentResolver().openOutputStream(uri)) { out.write(bytes); }
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "Saved to Downloads/Lady Jaja", Toast.LENGTH_SHORT).show());
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Could not save file", Toast.LENGTH_SHORT).show());
-            }
+            } catch (Exception e) { runOnUiThread(() -> Toast.makeText(MainActivity.this, "Could not save file", Toast.LENGTH_SHORT).show()); }
         }
     }
 }
