@@ -2,6 +2,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
         android:label="Lady Jaja"
         android:theme="@style/Theme.LadyJaja"
         android:usesCleartextTraffic="false">
