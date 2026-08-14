@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.LadyJaja" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/lady_orange</item>
+        <item name="android:navigationBarColor">@color/lady_black</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
