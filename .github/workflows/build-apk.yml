@@ -23,7 +23,16 @@ jobs:
       - name: Prepare web assets
         run: |
           mkdir -p app/src/main/assets
-          cat payload/mobile.b64.part* | base64 -d > /tmp/mobile.zip
+          python3 - <<'PY'
+          import base64, glob, re
+          files = sorted(glob.glob('payload/mobile.b64.part*'))
+          raw = ''.join(open(f, encoding='utf-8').read() for f in files)
+          clean = ''.join(re.findall(r'[A-Za-z0-9+/=]', raw))
+          data = base64.b64decode(clean + '=' * ((4-len(clean)%4)%4), validate=False)
+          open('/tmp/mobile.zip','wb').write(data)
+          print('decoded', len(data), 'bytes from', len(files), 'parts')
+          PY
+          unzip -t /tmp/mobile.zip
           unzip -oq /tmp/mobile.zip -d app/src/main/assets
           test -f app/src/main/assets/index.html
       - name: Generate Lady Jaja app icon
