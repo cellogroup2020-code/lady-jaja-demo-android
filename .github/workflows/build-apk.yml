@@ -23,36 +23,25 @@ jobs:
       - name: Prepare and verify web assets
         run: |
           rm -rf app/src/main/assets
-          mkdir -p app/src/main/assets/assets
-          cat payload2/mobile.part* | base64 -d > /tmp/mobile.zip
-          unzip -oq /tmp/mobile.zip -d app/src/main/assets || true
-          cp patch/employee.js app/src/main/assets/assets/employee.js
+          mkdir -p app/src/main/assets
+          cp -R source/. app/src/main/assets/
           test -f app/src/main/assets/index.html
           test -f app/src/main/assets/employee.html
           test -f app/src/main/assets/backoffice.html
+          test -f app/src/main/assets/assets/v2-pre.js
+          test -f app/src/main/assets/assets/v2-post.js
+          test -f app/src/main/assets/assets/v2.css
           node --check app/src/main/assets/assets/shared.js
+          node --check app/src/main/assets/assets/v2-pre.js
           node --check app/src/main/assets/assets/employee.js
           node --check app/src/main/assets/assets/backoffice.js
-      - name: Snapshot editable web source
-        run: |
-          rm -rf source
-          mkdir -p source/assets
-          cp app/src/main/assets/index.html source/index.html
-          cp app/src/main/assets/employee.html source/employee.html
-          cp app/src/main/assets/backoffice.html source/backoffice.html
-          cp app/src/main/assets/assets/styles.css source/assets/styles.css
-          cp app/src/main/assets/assets/shared.js source/assets/shared.js
-          cp app/src/main/assets/assets/backoffice.js source/assets/backoffice.js
-          cp app/src/main/assets/assets/employee.js source/assets/employee.js
-          cp app/src/main/assets/manifest.webmanifest source/manifest.webmanifest 2>/dev/null || true
-          cp app/src/main/assets/sw.js source/sw.js 2>/dev/null || true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add source
-          if ! git diff --cached --quiet; then
-            git commit -m "Snapshot editable Lady Jaja web source [skip ci]"
-            git push
-          fi
+          node --check app/src/main/assets/assets/v2-post.js
+          grep -q 'assets/v2.css' app/src/main/assets/employee.html
+          grep -q 'assets/v2.css' app/src/main/assets/backoffice.html
+          grep -q 'assets/v2-pre.js' app/src/main/assets/employee.html
+          grep -q 'assets/v2-post.js' app/src/main/assets/backoffice.html
+      - name: Prepare stable demo signing
+        run: base64 -d app/ladyjaja-demo.keystore.b64 > app/ladyjaja-demo.keystore
       - name: Generate Lady Jaja logo and app icons
         run: |
           sudo apt-get update -qq
@@ -68,14 +57,14 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
       - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Lady-Jaja-Demo.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Lady-Jaja-Demo-V2.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Lady-Jaja-Demo-APK
-          path: Lady-Jaja-Demo.apk
-      - name: Publish demo release
+          name: Lady-Jaja-Demo-V2-APK
+          path: Lady-Jaja-Demo-V2.apk
+      - name: Publish V2 demo release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete demo-v1 --yes --cleanup-tag || true
-          gh release create demo-v1 Lady-Jaja-Demo.apk --title "Lady Jaja Demo APK" --notes "Android management demo. Data is stored locally on the installed device."
+          gh release delete demo-v2 --yes --cleanup-tag || true
+          gh release create demo-v2 Lady-Jaja-Demo-V2.apk --title "Lady Jaja Demo APK V2" --notes "V2 fixes: cascading submission filters, clear-all-filters, mobile/tablet backoffice sign out, form/user delete actions, launcher and splash logo sizing, simplified launcher cards, and repaired employee form opening/submission flow. Data remains local to the installed device."
