@@ -20,19 +20,29 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-      - name: Prepare web assets
+      - name: Prepare and verify web assets
         run: |
-          mkdir -p app/src/main/assets
+          rm -rf app/src/main/assets
+          mkdir -p app/src/main/assets/assets
           cat payload2/mobile.part* | base64 -d > /tmp/mobile.zip
-          unzip -t /tmp/mobile.zip
-          unzip -oq /tmp/mobile.zip -d app/src/main/assets
+          # The original demo archive has one damaged employee.js entry. Extract the
+          # remaining verified V2 assets, then replace all JS files with clean patches.
+          unzip -oq /tmp/mobile.zip -d app/src/main/assets || true
+          gzip -dc patch/employee.js.gz > app/src/main/assets/assets/employee.js
+          gzip -dc patch/shared.js.gz > app/src/main/assets/assets/shared.js
+          gzip -dc patch/backoffice.js.gz > app/src/main/assets/assets/backoffice.js
           test -f app/src/main/assets/index.html
-      - name: Generate Lady Jaja app icon
+          test -f app/src/main/assets/employee.html
+          test -f app/src/main/assets/backoffice.html
+          test -f app/src/main/assets/assets/logo.png
+          test -f app/src/main/assets/assets/icon-512.png
+          node --check app/src/main/assets/assets/shared.js
+          node --check app/src/main/assets/assets/employee.js
+          node --check app/src/main/assets/assets/backoffice.js
+      - name: Prepare Lady Jaja app icon
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y imagemagick fonts-dejavu-core >/dev/null
           mkdir -p app/src/main/res/drawable
-          convert -size 512x512 xc:'#E74605' -fill white -gravity center -font DejaVu-Sans-Bold -pointsize 112 -interline-spacing -16 -annotate +0+0 $'Lady\nJaja' app/src/main/res/drawable/ic_launcher.png
+          cp app/src/main/assets/assets/icon-512.png app/src/main/res/drawable/ic_launcher.png
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
