@@ -4,11 +4,26 @@ android {
     namespace 'com.ladyjaja.demo'
     compileSdk 34
 
+    signingConfigs {
+        demo {
+            storeFile file('ladyjaja-demo.keystore')
+            storePassword 'ladyjaja2026'
+            keyAlias 'ladyjaja'
+            keyPassword 'ladyjaja2026'
+        }
+    }
+
     defaultConfig {
         applicationId 'com.ladyjaja.demo'
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName '1.0-demo'
+        versionCode 2
+        versionName '1.1-demo'
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.demo
+        }
     }
 }
