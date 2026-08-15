@@ -25,12 +25,10 @@ jobs:
           rm -rf app/src/main/assets
           mkdir -p app/src/main/assets/assets
           cat payload2/mobile.part* | base64 -d > /tmp/mobile.zip
-          # The original demo archive has one damaged employee.js entry. Extract the
-          # remaining verified V2 assets, then replace all JS files with clean patches.
+          # One entry in the transported demo archive has a CRC error. Extract all
+          # usable V2 assets, then replace that entry with the clean source file.
           unzip -oq /tmp/mobile.zip -d app/src/main/assets || true
-          gzip -dc patch/employee.js.gz > app/src/main/assets/assets/employee.js
-          gzip -dc patch/shared.js.gz > app/src/main/assets/assets/shared.js
-          gzip -dc patch/backoffice.js.gz > app/src/main/assets/assets/backoffice.js
+          cp patch/employee.js app/src/main/assets/assets/employee.js
           test -f app/src/main/assets/index.html
           test -f app/src/main/assets/employee.html
           test -f app/src/main/assets/backoffice.html
