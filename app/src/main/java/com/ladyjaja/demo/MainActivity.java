@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         webView = new WebView(this);
         setContentView(webView);
+
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -43,8 +44,14 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setMediaPlaybackRequiresUserGesture(false);
+
         webView.addJavascriptInterface(new NativeBridge(), "AndroidBridge");
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                injectNativeHelpers(view);
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
@@ -53,7 +60,21 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    private void injectNativeHelpers(WebView view) {
+        String js = "(function(){" +
+                "if(window.LJ&&window.AndroidBridge){" +
+                "LJ.download=function(filename,content,type){AndroidBridge.saveText(String(filename),String(content),type||'text/plain');};" +
+                "LJ.downloadDataUrl=function(filename,dataUrl){AndroidBridge.saveDataUrl(String(filename),String(dataUrl));};" +
+                "}" +
+                "if(window.AndroidBridge){" +
+                "window.open=function(){var h='';return{document:{write:function(s){h+=String(s);},close:function(){AndroidBridge.printHtml('Lady Jaja Report',h);}}};};" +
+                "}" +
+                "})();";
+        view.evaluateJavascript(js, null);
     }
 
     private void openCamera() {
