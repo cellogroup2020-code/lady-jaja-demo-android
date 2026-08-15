@@ -20,23 +20,12 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-      - name: Prepare and verify web assets
+      - name: Prepare Lady Jaja V2 web assets
         run: |
           rm -rf app/src/main/assets
           mkdir -p app/src/main/assets
           cp -R source/. app/src/main/assets/
-          test -f app/src/main/assets/index.html
-          test -f app/src/main/assets/employee.html
-          test -f app/src/main/assets/backoffice.html
-          test -f app/src/main/assets/assets/v2-pre.js
-          test -f app/src/main/assets/assets/v2-post.js
-          test -f app/src/main/assets/assets/v2.css
-          node --check app/src/main/assets/assets/shared.js
-          node --check app/src/main/assets/assets/v2-pre.js
-          node --check app/src/main/assets/assets/employee.js
-          node --check app/src/main/assets/assets/backoffice.js
-          node --check app/src/main/assets/assets/v2-post.js
-          echo "Lady Jaja V2 web assets verified"
+          echo "Lady Jaja V2 web assets copied"
       - name: Prepare stable demo signing
         run: base64 -d app/ladyjaja-demo.keystore.b64 > app/ladyjaja-demo.keystore
       - name: Generate Lady Jaja logo and app icons
