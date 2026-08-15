@@ -25,21 +25,24 @@ jobs:
           rm -rf app/src/main/assets
           mkdir -p app/src/main/assets/assets
           cat payload2/mobile.part* | base64 -d > /tmp/mobile.zip
-          # One entry in the transported demo archive has a CRC error. Extract all
-          # usable V2 assets, then replace that entry with the clean source file.
+          # One transported entry has a CRC error. Keep the usable V2 assets and
+          # replace employee.js with the clean source committed in /patch.
           unzip -oq /tmp/mobile.zip -d app/src/main/assets || true
           cp patch/employee.js app/src/main/assets/assets/employee.js
           test -f app/src/main/assets/index.html
           test -f app/src/main/assets/employee.html
           test -f app/src/main/assets/backoffice.html
-          test -f app/src/main/assets/assets/logo.png
-          test -f app/src/main/assets/assets/icon-512.png
           node --check app/src/main/assets/assets/shared.js
           node --check app/src/main/assets/assets/employee.js
           node --check app/src/main/assets/assets/backoffice.js
-      - name: Prepare Lady Jaja app icon
+      - name: Generate Lady Jaja logo and app icons
         run: |
-          mkdir -p app/src/main/res/drawable
+          sudo apt-get update -qq
+          sudo apt-get install -y imagemagick fonts-dejavu-core >/dev/null
+          mkdir -p app/src/main/res/drawable app/src/main/assets/assets
+          convert -size 640x260 xc:none -fill '#E74605' -gravity center -font DejaVu-Sans-Bold -pointsize 108 -interline-spacing -22 -annotate +0+0 $'Lady\nJaja' app/src/main/assets/assets/logo.png
+          convert -size 512x512 xc:'#E74605' -fill white -gravity center -font DejaVu-Sans-Bold -pointsize 116 -interline-spacing -20 -annotate +0+0 $'Lady\nJaja' app/src/main/assets/assets/icon-512.png
+          convert app/src/main/assets/assets/icon-512.png -resize 192x192 app/src/main/assets/assets/icon-192.png
           cp app/src/main/assets/assets/icon-512.png app/src/main/res/drawable/ic_launcher.png
       - uses: gradle/actions/setup-gradle@v4
         with:
