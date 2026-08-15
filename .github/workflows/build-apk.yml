@@ -20,12 +20,37 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-      - name: Prepare Lady Jaja V2 web assets
+      - name: Prepare and verify Lady Jaja V3 web assets
         run: |
           rm -rf app/src/main/assets
           mkdir -p app/src/main/assets
           cp -R source/. app/src/main/assets/
-          echo "Lady Jaja V2 web assets copied"
+          test -f app/src/main/assets/index.html
+          test -f app/src/main/assets/employee.html
+          test -f app/src/main/assets/backoffice.html
+          test -f app/src/main/assets/assets/shared.js
+          test -f app/src/main/assets/assets/v2-pre.js
+          test -f app/src/main/assets/assets/v3-native.js
+          test -f app/src/main/assets/assets/employee.js
+          test -f app/src/main/assets/assets/backoffice.js
+          node --check app/src/main/assets/assets/shared.js
+          node --check app/src/main/assets/assets/v2-pre.js
+          node --check app/src/main/assets/assets/v3-native.js
+          node --check app/src/main/assets/assets/employee.js
+          node --check app/src/main/assets/assets/backoffice.js
+          grep -q 'clearAllFilters' app/src/main/assets/assets/v3-native.js
+          grep -q 'refreshCascadingFilters' app/src/main/assets/assets/v3-native.js
+          grep -q 'v3TopLogout' app/src/main/assets/assets/v3-native.js
+          grep -q 'data-v3-delete-form' app/src/main/assets/assets/v3-native.js
+          grep -q 'data-v3-delete-user' app/src/main/assets/assets/v3-native.js
+          python - <<'PY'
+          from pathlib import Path
+          h=Path('app/src/main/assets/backoffice.html').read_text()
+          assert 'assets/v3-native.js' in h
+          assert 'assets/v2-post.js' not in h
+          assert h.index('assets/v3-native.js') < h.index('assets/backoffice.js')
+          print('Lady Jaja V3 source verification passed')
+          PY
       - name: Prepare stable demo signing
         run: base64 -d app/ladyjaja-demo.keystore.b64 > app/ladyjaja-demo.keystore
       - name: Generate Lady Jaja logo and app icons
@@ -43,14 +68,14 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
       - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Lady-Jaja-Demo-V2.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Lady-Jaja-Demo-V3.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Lady-Jaja-Demo-V2-APK
-          path: Lady-Jaja-Demo-V2.apk
-      - name: Publish V2 demo release
+          name: Lady-Jaja-Demo-V3-APK
+          path: Lady-Jaja-Demo-V3.apk
+      - name: Publish V3 demo release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete demo-v2 --yes --cleanup-tag || true
-          gh release create demo-v2 Lady-Jaja-Demo-V2.apk --title "Lady Jaja Demo APK V2" --notes "V2 fixes: cascading submission filters, clear-all-filters, mobile/tablet backoffice sign out, form/user delete actions, launcher and splash logo sizing, simplified launcher cards, and repaired employee form opening/submission flow. Data remains local to the installed device."
+          gh release delete demo-v3 --yes --cleanup-tag || true
+          gh release create demo-v3 Lady-Jaja-Demo-V3.apk --title "Lady Jaja Demo APK V3" --notes "V3 verified fixes: clear-all submission filters, cascading FOH/BOH filter options, visible Manager/Admin Sign Out in the top bar, and confirmed Delete actions for Forms and Users. Existing V2 logo and employee form fixes are retained. Data remains local to the installed device."
